@@ -1,7 +1,7 @@
 /venv/
-/data/
 /models/
-/val_data/
-fingernet.*
+fingernet*
 /__pycache__/
 /.vscode/
+/mistakes/
+*data/

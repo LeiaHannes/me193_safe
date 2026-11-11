@@ -68,7 +68,7 @@ def main():
     p.add_argument("--optim", choices=["adam", "sgd"], default="adam")
     p.add_argument("--width", type=int, default=16)
     p.add_argument("--depth", type=int, default=4)
-    p.add_argument("--workers", type=int, default=2)
+    p.add_argument("--workers", type=int, default=4, help="data-loading processes (try 4-8)")
     p.add_argument("--out", default="fingernet")
     args = p.parse_args()
 
@@ -76,6 +76,11 @@ def main():
     random.seed(0)
     device = pick_device()
     print("Device:", device)
+    if device.type == "cuda":
+        print("GPU:", torch.cuda.get_device_name(0))
+        torch.backends.cudnn.benchmark = True   # let cuDNN pick the fastest conv algorithm for our fixed image size
+    else:
+        print("No GPU found. On Windows, check you installed the CUDA build of PyTorch.")
 
     # ---------- data ----------
     train_full = datasets.ImageFolder(args.data, transform=train_tf)
@@ -100,8 +105,14 @@ def main():
     print("Images per class:", dict(zip(classes, counts)))
     print(f"Train {len(train_ds)} | Val {len(val_ds)}")
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch, shuffle=True, num_workers=args.workers)
-    val_loader = DataLoader(val_ds, batch_size=args.batch, shuffle=False, num_workers=args.workers)
+    # Speed: several worker processes decode/augment images in parallel, and
+    # persistent_workers stops Windows from restarting them every epoch.
+    # pin_memory makes CPU->GPU copies faster.
+    loader_kw = dict(batch_size=args.batch, num_workers=args.workers,
+                     pin_memory=(device.type == "cuda"),
+                     persistent_workers=args.workers > 0)
+    train_loader = DataLoader(train_ds, shuffle=True, **loader_kw)
+    val_loader = DataLoader(val_ds, shuffle=False, **loader_kw)
 
     # ---------- model, loss, optimizer ----------
     model = FingerNet(len(classes), args.width, args.depth, IMG_H, IMG_W).to(device)

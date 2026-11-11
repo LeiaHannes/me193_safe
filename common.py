@@ -53,9 +53,12 @@ NORMALIZE = transforms.Normalize(mean=[0.5], std=[0.5])
 # exact pictures.
 train_tf = transforms.Compose([
     transforms.Grayscale(1),
-    transforms.RandomResizedCrop((IMG_H, IMG_W), scale=(0.75, 1.0), ratio=(1.5, 2.0)),  # small random zoom/shift
+    transforms.Resize((IMG_H, IMG_W)),
     transforms.RandomHorizontalFlip(),          # left hand vs right hand: same count
-    transforms.RandomRotation(20),
+    # Small shift/zoom/rotate. Kept gentle on purpose: an aggressive random crop
+    # can cut a finger out of the frame, turning a "5" into what looks like a "4"
+    # while the label still says 5.
+    transforms.RandomAffine(degrees=15, translate=(0.05, 0.05), scale=(0.92, 1.05)),
     transforms.ColorJitter(brightness=0.4, contrast=0.4),
     transforms.ToTensor(),
     NORMALIZE,
