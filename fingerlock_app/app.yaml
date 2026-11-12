@@ -1,0 +1,5 @@
+name: FingerLock
+description: Neural-network finger-code lock with a live activation display
+icon: 🔐
+ports:
+  - 7000
